@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+  <title>MOE CAT Prototype</title>
+
+  <style type="text/css">
+    a {
+      color: gray;
+    }
+    body {
+      background: #EEEEEE;
+      font-family: Helvetica, Arial, sans-serif;
+      font-size: 48px;
+      margin: 0;
+      padding: 0;
+    }
+    button {
+      font-size: 36px;
+      padding: 24px;
+    }
+    div#outer {
+      position: absolute;
+      height: 100%;
+      width: 100%;
+    }
+    div#inner {
+      position: relative;
+      text-align: center;
+      top: 50%;
+      -webkit-transform: translateY(-50%);
+      -ms-transform: translateY(-50%);
+      transform: translateY(-50%);
+    }
+    h1 {
+      color: gray;
+      font-size: 1.2em;
+      margin-top: 0;
+    }
+    input {
+      font-size: 48px;
+    }
+    p.footer {
+      color: gray;
+      font-size: 16px;
+    }
+  </style>
+
+  <!-- Include order: first jquery, then opencpu.js, and then your code -->
+  <script src="opencpu/jquery-1.10.2.min.js"></script>
+  <script src="opencpu/opencpu-0.4.js"></script>
+  <script>
+    // init this script when the page has loaded
+    $(document).ready(function(){
+
+      // Model
+      var current_item = 50;
+      var current_item_question = "Please wait";
+      var current_item_answer = 0;
+      var theta = 0.0;
+      var sem = "N/A";
+      var items = [];
+      var responses = [];
+
+      var updateViews = function() {
+        $("#question").text(current_item_question);
+        $("#score").text(theta);
+        $("#error").text(sem);
+      }
+      
+      var updateModel = function(data) {
+        current_item = data["current_item"];
+        current_item_question = data["current_item_question"];
+        current_item_answer = data["current_item_answer"];
+        theta = data["theta"];
+        sem = data["sem"]
+        items.push(current_item);
+      }
+
+      var nextQuestion = function() {
+        $("#answerbutton").attr("disabled", "disabled");
+
+        // Perform the request
+        var req = ocpu.call("nextQuestion", {
+          items: items,
+          responses: responses,
+          theta: theta
+        }, function(session){
+          session.getObject(function(data) {
+            updateModel(data);
+            updateViews();
+            $("#answerfield").val("").focus();
+          });
+        });
+
+        // If R returns an error, alert the error message
+        req.fail(function(){
+          alert("Server error: " + req.responseText);
+        });
+        
+        // After request complete, re-enable the button 
+        req.always(function(){
+          $("#answerbutton").removeAttr("disabled");
+        });
+      }
+
+      // Display temporary loading data
+      updateViews();    
+
+      // Initiatize first question
+      nextQuestion();
+
+      // When the "Submit Answer" putton is clicked
+      $("#answerbutton").on("click", function() {
+        // Read the proposed answer
+        var response = $("#answerfield").val();
+        var r = parseInt(response);
+        if (!isNaN(r)) {
+          responses.push((r == current_item_answer) ? 1 : 0);
+          nextQuestion();
+        } else {
+          alert("Please enter a valid response.");
+        }
+      });
+
+      $("#answerfield").keyup(function(event) {
+        if (event.keyCode == 13) {
+          $("#answerbutton").click();
+        }
+      });
+
+    });
+  </script>
+
+</head>
+
+<body>
+
+  <div id="outer">
+    <div id="inner">
+      <h1>MOE <abbr title="Computerised Adaptive Testing">CAT</abbr> Prototype</h1>
+
+      <p><span id="question"></span> = <input type="text" id="answerfield" size="2"></p>
+      <p><button id="answerbutton" type="button">Submit Answer</button></p>
+
+      <p><b>Score:</b> <span id="score"></span> &nbsp;&nbsp;&nbsp; <b>Error:</b> <span id="error"></span></p>
+
+      <p class="footer">Based on <a href="http://cran.r-project.org/web/packages/catR/index.html">catR</a> and <a href="https://www.opencpu.org/">opencpu</a>.</p>
+    </div>
+  </div>
+
+</body>
+</html>
