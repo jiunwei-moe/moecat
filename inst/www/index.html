@@ -63,7 +63,11 @@
       var responses = [];
 
       var updateViews = function() {
-        $("#question").text(current_item_question);
+        if (!isTestOver()) {
+          $("#question").text(current_item_question);
+        } else {
+          $("#question").text("Test is over");
+        }
         $("#score").text(theta);
         $("#error").text(sem);
       }
@@ -90,6 +94,7 @@
             updateModel(data);
             updateViews();
             $("#answerfield").val("").focus();
+            checkTestOver();
           });
         });
 
@@ -102,6 +107,19 @@
         req.always(function(){
           $("#answerbutton").removeAttr("disabled");
         });
+      }
+
+      var isTestOver = function() {
+        return (items.length > 15) || (parseFloat(sem) < 0.1);
+      }
+
+      var checkTestOver = function() {
+        // Check whether test is over
+        if (isTestOver()) {
+          $("#answerfield").attr("disabled", "disabled");
+          $("#answerbutton").attr("disabled", "disabled");
+          alert("The test is over. Your score is: " + theta);
+        }
       }
 
       // Display temporary loading data
